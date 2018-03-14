@@ -1,7 +1,7 @@
 #goal
 geometry_msgs/Pose pose
 float64 width
-moveit_grasps/GraspGeneratorOptions[] options
+cwru_davinci_moveit_grasps/GraspGeneratorOptions[] options
 ---
 #result
 moveit_msgs/Grasp[] grasps

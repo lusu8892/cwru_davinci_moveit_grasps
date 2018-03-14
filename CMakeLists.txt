@@ -61,7 +61,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 
 ## Generate messages in the 'msg' folder
 add_message_files(DIRECTORY msg FILES
-    GraspGeneratorOptions.msg
+  GraspGeneratorOptions.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -73,15 +73,15 @@ add_message_files(DIRECTORY msg FILES
 
 ## Generate actions in the 'action' folder
 add_action_files(DIRECTORY action FILES
-    GenerateGrasps.action
+  GenerateGrasps.action
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(DEPENDENCIES
-    geometry_msgs
-    actionlib_msgs
-    std_msgs
-    moveit_msgs
+  geometry_msgs
+  actionlib_msgs
+  std_msgs
+  moveit_msgs
 )
 
 ################################################
@@ -116,8 +116,8 @@ generate_messages(DEPENDENCIES
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES cwru_davinci_moveit_grasps
-  CATKIN_DEPENDS moveit_msgs roscpp message_runtime
-  DEPENDS system_lib
+  CATKIN_DEPENDS moveit_msgs roscpp message_runtime actionlib_msgs geometry_msgs
+  DEPENDS
 )
 
 ###########
@@ -132,9 +132,9 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/cwru_davinci_moveit_grasps.cpp
-# )
+ add_library(${PROJECT_NAME}
+   src/davinci_grasp_generator.cpp
+ )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
