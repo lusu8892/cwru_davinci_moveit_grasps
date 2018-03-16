@@ -103,27 +103,27 @@ namespace davinci_moveit_grasps
     DavinciGraspGenerator(moveit_visual_tools::MoveItVisualToolsPtr visual_tools, bool verbose = false);
 
     /**
-     * \brief Create possible grasp positions around a cuboid
-     * \param cuboid_pose - centroid of object to grasp in world frame
-     * \param depth length of cuboid along local x-axis
-     * \param width length of cuboid along local y-axis
-     * \param height length of cuboid along local z-axis
-     * \param grasp_data data describing end effector
-     * \param grasp_candidates possible grasps generated
-     * \return true if successful
+     * @brief Create possible grasp positions around a cuboid
+     * @param cuboid_pose - centroid of object to grasp in world frame
+     * @param depth length of cuboid along local x-axis
+     * @param width length of cuboid along local y-axis
+     * @param height length of cuboid along local z-axis
+     * @param grasp_data data describing end effector
+     * @param grasp_candidates possible grasps generated
+     * @return true if successful
      */
     bool generateGrasps(const Eigen3d::Affine3d &needle_pose, double depth, double width, double height,
                         const GraspDatePtr grasp_data, std::vector <GraspCandidatePtr> &grasp_candidates);
 
     /**
-     * \brief helper function for determining if the grasp will intersect the cuboid
-     * \param cuboid_pose - centroid of object to grasp in world frame
-     * \param depth - size of cuboid along x axis
-     * \param width - size of cuboid along y axis
-     * \param height - size of cuboid along z axis
-     * \param grasp_pose - pose of grasp
-     * \param grasp_data - data describing end effector
-     * \return true if the grasp intersects the cuboid
+     * @brief helper function for determining if the grasp will intersect the cuboid
+     * @param cuboid_pose - centroid of object to grasp in world frame
+     * @param depth - size of cuboid along x axis
+     * @param width - size of cuboid along y axis
+     * @param height - size of cuboid along z axis
+     * @param grasp_pose - pose of grasp
+     * @param grasp_data - data describing end effector
+     * @return true if the grasp intersects the cuboid
      */
     bool graspIntersectionHelper(Eigen::Affine3d cuboid_pose, double depth, double width, double height,
                                  Eigen::Affine3d grasp_pose, const GraspDataPtr grasp_data);
@@ -184,6 +184,9 @@ namespace davinci_moveit_grasps
       */
     bool visualizeAnimatedGrasps(const std::vector<GraspCandidatePtr>& grasp_candidates,
                                  const moveit::core::JointModelGroup* ee_jmg, double animation_speed);
+
+    // Ideal grasp pose for scoring purposes
+    Eigen::Affine3d ideal_grasp_pose_;
 
   private:
     // class for publishing stuff to rviz

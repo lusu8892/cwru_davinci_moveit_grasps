@@ -37,7 +37,7 @@
 */
 
 
-#include <cwru_davinci_moveit_grasps/davinci_needle_grasper.h>
+#include <cwru_davinci_moveit_grasps/davinci_grasp_generator.h>
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
 
 namespace davinci_moveit_grasps {
@@ -67,7 +67,21 @@ DavinciGraspGenerator::DavinciGraspGenerator(moveit_visual_tools::MoveItVisualTo
   ROS_INFO_STREAM_NAMED("grasps", "GraspGenerator Ready.");
 
   // set ideal grasp pose (currently only uses orientation of pose)
+  // TODO this ideal grasp pose needs to be changed later
   ideal_grasp_pose_ = Eigen::Affine3d::Identity();
+  ideal_grasp_pose_ = ideal_grasp_pose_*Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ())
+      *Eigen::AngleAxisd(-M_PI/2.0, Eigen::Vector3d::UnitX());
 
+  ideal_grasp_pose_.translation() = Eigen::Vector3d(0, 0, 2.0);
+}
+
+bool DavinciGraspGenerator::getIntersectionHelper(Eigen::Affined3d cuboid_pose,
+                                                  double depth,
+                                                  double width,
+                                                  double height,
+                                                  Eigen::Affined3d grasp_pose,
+                                                  const GraspDataPtr grasp_data)
+{
+  S
 }
 }

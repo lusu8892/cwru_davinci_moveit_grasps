@@ -44,11 +44,35 @@
 
 namespace davinci_moveit_grasps
 {
-  class DavinciNeedleGrasper
+  class DavinciNeedleGrasper : public DavinciGraspGenerator
   {
+  public:
+    DavinciNeedleGrasper(moveit_visual_tools::MoveItVisualToolsPtr visual_tools, bool verbose = false);
+
+    /**
+     * @brief generate needle grasp depending on how needle will be grasped by gripper
+     * @param theta_0 first parameter to grasp needle
+     * @param theta_1 second parameter to grasp needle
+     * @param theta_2 third parameter to grasp needle
+     * @param theta_3 fourth parameter to grasp needle
+     * @return
+     */
+    bool generateNeedleGrasp(const double &theta_0,
+                             const double &theta_1,
+                             const double &theta_2,
+                             const double &theta_3);
+
+    /**
+     * @brief generate needle grasp provided by needle grasp transformation
+     * @param needle_to_gripper_transform
+     * @return
+     */
+    bool generateNeedleGrasp(const Eigen::Affine3d& needle_to_gripper_transform);
+  private:
+    ros::NodeHandle nh_;
+
 
   };
 }
-
 
 #endif //CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_NEEDLE_GRASPER_H
