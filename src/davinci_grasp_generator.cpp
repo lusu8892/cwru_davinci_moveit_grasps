@@ -82,6 +82,6 @@ bool DavinciGraspGenerator::getIntersectionHelper(Eigen::Affined3d cuboid_pose,
                                                   Eigen::Affined3d grasp_pose,
                                                   const GraspDataPtr grasp_data)
 {
-  S
+  // TODO
 }
 }
