@@ -65,6 +65,20 @@
 namespace davinci_moveit_grasps
 {
 
+  struct CuttingPlane
+  {
+    Eigen::Affine3d pose_;
+    grasp_parallel_plane plane_;
+
+    int direction_;
+
+    CuttingPlane(Eigen::Affine3d pose, grasp_parallel_plane plane, int direction)
+      : pose_(pose), plane_(plane), direction_(direction)
+    {
+      // blank
+    }
+  };
+
   struct IkThreadStruct
   {
     IkThreadStruct(std::vector<GraspCandidatePtr> &grasp_candidates,  // the input
@@ -129,6 +143,7 @@ namespace davinci_moveit_grasps
                       const robot_model::JointModelGroup * arm_jmg, const moveit::core::RobotStatePtr seed_state,
                       bool filter_pregrasp = false);
 
+    bool filterGraspByPlane(GraspCandidatePtr grasp_candiate)
     /**
      * @brief filter grasps by desired orientation.
      * @param grasp_candidate - all possible grasps that this will test. this vector is returned modified
@@ -142,8 +157,8 @@ namespace davinci_moveit_grasps
 
 
     /**
-   * \brief Helper for filterGrasps
-   * \return number of grasps remaining
+   * @brief Helper for filterGrasps
+   * @return number of grasps remaining
    */
     std::size_t filterGraspsHelper(std::vector<GraspCandidatePtr>& grasp_candidates,
                                    planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor,
@@ -157,6 +172,26 @@ namespace davinci_moveit_grasps
      */
     bool processCandidateGrasp(IkThreadStructPtr& ik_thread_struct);
 
+    /**
+     * @brief helper for the thread function to find IK solutions
+     * @param ik_solution
+     * @param ik_thread_struct
+     * @param grasp_candidate
+     * @param constraint_fn
+     * @return true on success
+     */
+    bool findIKSolution(std::vector<double> &ik_solution,
+                        IkThreadStructPtr &ik_thread_struct,
+                        GraspCandidatePtr &grasp_candidate,
+                        const moveit::core::GroupStateValidityCallbackFn &constraint_fn);
+
+    /**
+     * @brief Check if ik solution is in collision with fingers closed
+     * @return true on success
+     */
+    bool checkFingersClosedIK(std::vector<double>& ik_solution, IkThreadStructPtr& ik_thread_struct,
+                              GraspCandidatePtr& grasp_candidate,
+                              const moveit::core::GroupStateValidityCallbackFn& constraint_fn);
 
 
   };
