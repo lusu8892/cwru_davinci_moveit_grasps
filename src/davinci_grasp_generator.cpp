@@ -40,48 +40,49 @@
 #include <cwru_davinci_moveit_grasps/davinci_grasp_generator.h>
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
 
-namespace davinci_moveit_grasps {
-DavinciGraspGenerator::DavinciGraspGenerator(moveit_visual_tools::MoveItVisualToolsPtr visual_tools,
-                                             bool verbose = false) : visual_tools_(visual_tools), verbose_(verbose),
-                                                                     nh_("~/davinci_moveit_grasps/generator")
+namespace davinci_moveit_grasps
 {
-  // load visulization settings
-  const std::string parent_name = "grasps";  // for namespacing logging messages
+  DavinciGraspGenerator::DavinciGraspGenerator(moveit_visual_tools::MoveItVisualToolsPtr visual_tools,
+                                               bool verbose = false) : visual_tools_(visual_tools), verbose_(verbose),
+                                                                       nh_("~/davinci_moveit_grasps/generator")
+  {
+    // load visulization settings
+    const std::string parent_name = "grasps";  // for namespacing logging messages
 
-  rosparam_shortcuts::get(parent_name, nh_, "show_grasp_arrows", show_grasp_arrows_);
-  rosparam_shortcuts::get(parent_name, nh_, "show_grasp_arrows_speed", show_grasp_arrows_speed_);
+    rosparam_shortcuts::get(parent_name, nh_, "show_grasp_arrows", show_grasp_arrows_);
+    rosparam_shortcuts::get(parent_name, nh_, "show_grasp_arrows_speed", show_grasp_arrows_speed_);
 
-  rosparam_shortcuts::get(parent_name, nh_, "show_prefiltered_grasps", show_prefiltered_grasps_);
-  rosparam_shortcuts::get(parent_name, nh_, "show_grasp_arrows_speed", show_grasp_arrows_speed_);
+    rosparam_shortcuts::get(parent_name, nh_, "show_prefiltered_grasps", show_prefiltered_grasps_);
+    rosparam_shortcuts::get(parent_name, nh_, "show_grasp_arrows_speed", show_grasp_arrows_speed_);
 
-  // load scoring weights
-  rosparam_shortcuts::get(parent_name, nh_, "depth_score_weight", depth_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "width_score_weight", width_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "orientation_x_score_weight", orientation_x_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "orientation_y_score_weight", orientation_y_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "orientation_z_score_weight", orientation_z_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "translation_x_score_weight", translation_x_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "translation_y_score_weight", translation_y_score_weight_);
-  rosparam_shortcuts::get(parent_name, nh_, "translation_z_score_weight", translation_z_score_weight_);
+    // load scoring weights
+    rosparam_shortcuts::get(parent_name, nh_, "depth_score_weight", depth_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "width_score_weight", width_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "orientation_x_score_weight", orientation_x_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "orientation_y_score_weight", orientation_y_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "orientation_z_score_weight", orientation_z_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "translation_x_score_weight", translation_x_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "translation_y_score_weight", translation_y_score_weight_);
+    rosparam_shortcuts::get(parent_name, nh_, "translation_z_score_weight", translation_z_score_weight_);
 
-  ROS_INFO_STREAM_NAMED("grasps", "GraspGenerator Ready.");
+    ROS_INFO_STREAM_NAMED("grasps", "GraspGenerator Ready.");
 
-  // set ideal grasp pose (currently only uses orientation of pose)
-  // TODO this ideal grasp pose needs to be changed later
-  ideal_grasp_pose_ = Eigen::Affine3d::Identity();
-  ideal_grasp_pose_ = ideal_grasp_pose_*Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ())
-      *Eigen::AngleAxisd(-M_PI/2.0, Eigen::Vector3d::UnitX());
+    // set ideal grasp pose (currently only uses orientation of pose)
+    // TODO this ideal grasp pose needs to be changed later
+    ideal_grasp_pose_ = Eigen::Affine3d::Identity();
+    ideal_grasp_pose_ = ideal_grasp_pose_ * Eigen::AngleAxisd(M_PI / 2.0, Eigen::Vector3d::UnitZ())
+                        * Eigen::AngleAxisd(-M_PI / 2.0, Eigen::Vector3d::UnitX());
 
-  ideal_grasp_pose_.translation() = Eigen::Vector3d(0, 0, 2.0);
-}
+    ideal_grasp_pose_.translation() = Eigen::Vector3d(0, 0, 2.0);
+  }
 
-bool DavinciGraspGenerator::getIntersectionHelper(Eigen::Affined3d cuboid_pose,
-                                                  double depth,
-                                                  double width,
-                                                  double height,
-                                                  Eigen::Affined3d grasp_pose,
-                                                  const GraspDataPtr grasp_data)
-{
-  // TODO
-}
-}
+  bool DavinciGraspGenerator::getIntersectionHelper(Eigen::Affined3d cuboid_pose,
+                                                    double depth,
+                                                    double width,
+                                                    double height,
+                                                    Eigen::Affined3d grasp_pose,
+                                                    const GraspDataPtr grasp_data)
+  {
+    // TODO
+  }
+}  // namespace

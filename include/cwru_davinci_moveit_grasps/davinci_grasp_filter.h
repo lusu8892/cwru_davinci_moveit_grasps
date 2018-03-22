@@ -47,7 +47,7 @@
 
 // Grasping
 #include <cwru_davinci_moveit_grasps/davinci_grasp_generator.h>
-//#include <cwru_davinci_moveit_grasps/grasp_candidate.h>
+#include <cwru_davinci_moveit_grasps/grasp_candidate.h>
 
 // Rviz
 #include <moveit_visual_tools/moveit_visual_tools.h>
@@ -65,6 +65,16 @@
 namespace davinci_moveit_grasps
 {
 
+  enum grasp_parallel_plane
+  {
+    XY,
+    XZ,
+    YZ
+  };
+
+  /**
+   * @brief contains information to filter grasps by a cutting plane
+   */
   struct CuttingPlane
   {
     Eigen::Affine3d pose_;
@@ -78,6 +88,25 @@ namespace davinci_moveit_grasps
       // blank
     }
   };
+
+  typedef boost::shared_ptr<CuttingPlane> CuttingPlanePtr;
+
+  /**
+   * @brief contains information to filter grasps by orientation
+   */
+  struct DesiredGraspOrientation
+  {
+    Eigen::Affine3d pose_;
+    double max_angle_offset_;
+
+    DesiredGraspOrientation(Eigen::Affine3d pose, double max_angle_offset) : pose_(pose),
+                                                                             max_angle_offset_(max_angle_offset_)
+    {
+      // blank
+    }
+  };
+
+  typedef boost::shared_ptr<DesiredGraspOrientation> DesiredGraspOrientationPtr;
 
   struct IkThreadStruct
   {
@@ -104,13 +133,14 @@ namespace davinci_moveit_grasps
     {
       // blank
     }
-    std::vector<GraspCandidatePtr>& grasp_candidates_;
+
+    std::vector<GraspCandidatePtr> &grasp_candidates_;
     planning_scene::PlanningScenePtr planning_scene_;
     Eigen::Affine3d link_transform_;
     std::size_t grasp_id_;
     kinematics::KinematicsBaseConstPtr kinematic_solver_;
     robot_state::RobotStatePtr robot_state_;
-    const robot_model::JointModelGroup* arm_jmg_;
+    const robot_model::JointModelGroup *arm_jmg_;
     double timeout_;
     bool filter_pregrasp_;
     bool verbose_;
@@ -138,12 +168,25 @@ namespace davinci_moveit_grasps
      * @param filter_pregrasp - whether to also check ik feasibility for the pregrasp position
      * @return number of grasps remaining
      */
-    bool filterGrasps(std::vector<GraspCandidatePtr>& grasp_candidates,
+    bool filterGrasps(std::vector<GraspCandidatePtr> &grasp_candidates,
                       planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor,
-                      const robot_model::JointModelGroup * arm_jmg, const moveit::core::RobotStatePtr seed_state,
+                      const robot_model::JointModelGroup *arm_jmg,
+                      const moveit::core::RobotStatePtr seed_state,
                       bool filter_pregrasp = false);
 
-    bool filterGraspByPlane(GraspCandidatePtr grasp_candiate)
+    /**
+     * @brief filter grasps by cutting plane
+     * @param grasp_candidate - the grasp candidate needed to be test
+     * @param filter_pose - pose of filter that will define cutting plane
+     * @param plane - the cutting plane (XY, XZ or YZ)
+     * @param direction - which side of this plane to cut (+/- 1)
+     * @return true if the grasp is filtered by operation
+     */
+    bool filterGraspByPlane(GraspCandidatePtr grasp_candidate,
+                            const Eigen::Affine3d &filter_pose,
+                            grasp_parallel_plane plane,
+                            const int direction);
+
     /**
      * @brief filter grasps by desired orientation.
      * @param grasp_candidate - all possible grasps that this will test. this vector is returned modified
@@ -152,17 +195,16 @@ namespace davinci_moveit_grasps
      * @return true if grasp is filtered by operation
      */
     bool filterGraspByOrientation(GraspCandidatePtr grasp_candidate,
-                                  Eigen::Affine3d desired_pose,
+                                  const Eigen::Affine3d desired_pose,
                                   double max_angular_offset);
 
-
     /**
-   * @brief Helper for filterGrasps
-   * @return number of grasps remaining
-   */
-    std::size_t filterGraspsHelper(std::vector<GraspCandidatePtr>& grasp_candidates,
+     * @brief Helper for filterGrasps
+     * @return number of grasps remaining
+     */
+    std::size_t filterGraspsHelper(std::vector<GraspCandidatePtr> &grasp_candidates,
                                    planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor,
-                                   const robot_model::JointModelGroup* arm_jmg,
+                                   const robot_model::JointModelGroup *arm_jmg,
                                    const moveit::core::RobotStatePtr seed_state, bool filter_pregrasp, bool verbose);
 
     /**
@@ -170,7 +212,7 @@ namespace davinci_moveit_grasps
      * @param ik_thread_struct
      * @return
      */
-    bool processCandidateGrasp(IkThreadStructPtr& ik_thread_struct);
+    bool processCandidateGrasp(IkThreadStructPtr &ik_thread_struct);
 
     /**
      * @brief helper for the thread function to find IK solutions
@@ -189,13 +231,79 @@ namespace davinci_moveit_grasps
      * @brief Check if ik solution is in collision with fingers closed
      * @return true on success
      */
-    bool checkFingersClosedIK(std::vector<double>& ik_solution, IkThreadStructPtr& ik_thread_struct,
-                              GraspCandidatePtr& grasp_candidate,
-                              const moveit::core::GroupStateValidityCallbackFn& constraint_fn);
+    bool checkFingersClosedIK(std::vector<double> &ik_solution, IkThreadStructPtr &ik_thread_struct,
+                              GraspCandidatePtr &grasp_candidate,
+                              const moveit::core::GroupStateValidityCallbackFn &constraint_fn);
+
+    /**
+     * @brief add a cutting plane
+     * @param pose - pose describing the cutting plane
+     * @param plane - which plane to use as the cutting plane
+     * @param direction - on which side of the plane the grasps will be removed
+     */
+    void addCuttingPlane(const Eigen::Affine3d$ pose, grasp_parallel_plane plane, int direction);
+
+    /**
+     * @brief show all cutting planes that are currently enables
+     * @return true on success
+     */
+    bool visualizeCuttingPlanes();
+
+    /**
+     * @brief show grasps after being filtered
+     * @param grasp_candidates
+     * @param arm_jmg
+     * @return true on success
+     */
+    bool visualizeGrasps(const std::vector<GraspCandidatePtr> &grasp_candidates,
+                         const moveit::core::JointModelGroup *arm_jmg);
 
 
+    /**
+     * @brief show solutions of entire amr
+     * @param grasp_candidates
+     * @return true on success
+     */
+    bool visualizeCandidateGrasps(const std::vector<GraspCandidatePtr>& grasp_candidates);
+
+  private:
+    // Allow a writeable robot state
+    robot_state::RobotStatePtr robot_state_;
+
+    // keep a robot state for every thread
+    std::vector<robot_state::RobotStatePtr> robot_states_;
+
+    // thread kinematic solvers
+    std::map<std::string, std::vector<kinematics::KinematicsBaseConstPtr> > kin_solvers_;
+
+    // class for publishing stuff to rviz
+    moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+
+    // number of degress of freedom for the ik solver to find
+    std::size_t num_variables_;
+
+    // time to allow ik solver to run
+    double solver_timeout_;
+
+    // visualization levels
+    bool collision_verbose_;
+    bool statistics_verbose_;
+    double collision_verbose_speed_;
+    bool show_filtered_grasps_;
+    bool show_filtered_arm_solutions_;
+    bool show_cutting_planes_;
+    double show_filtered_arm_solutions_speed_;
+    double show_filtered_arm_solutions_pregrasp_speed_;
+    bool show_grasp_filter_collision_if_failed_;
+
+    // shared node handle
+    ros::NodeHandle nh_;
+
+    // cutting planes and orientation filter
+    std::vector<CuttingPlanePtr> cutting_planes_;
+    std::vector<DesiredGraspOrientationPtr> desired_grasp_orientations_;
   };
 
-}
+}  // namespace
 
 #endif //CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_GRASP_FILTER_H

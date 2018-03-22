@@ -33,47 +33,44 @@
  *********************************************************************/
 
 /* Author: Su Lu <sxl924@case.edu>
-   Desc:   Generates geometric grasps for needle by implementing davinci_grasp_generator,
-   not using physics or contact wrenches
+   Desc:   Filters grasps based on kinematic feasibility and collision
 */
 
-#ifndef CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_NEEDLE_GRASPER_H
-#define CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_NEEDLE_GRASPER_H
+#ifndef CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_GRASP_CANDIDATE_H
+#define CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_GRASP_CANDIDATE_H
 
-#include<cwru_davinci_moveit_grasps/davinci_needle_grasper.h>
+// ROS
+#include <ros/ros.h>
+#include <moveit_msgs/Grasp.h>
+
+// Grasping
+//#include <moveit_grasps/grasp_data.h>
+
+// MoveIt
+#include <moveit/robot_state/robot_state.h>
+#include <moveit_msgs/Grasp.h>
 
 namespace davinci_moveit_grasps
 {
-  class DavinciNeedleGrasper : public DavinciGraspGenerator
+  class DavinciGraspCandidate
   {
   public:
-    DavinciNeedleGrasper(moveit_visual_tools::MoveItVisualToolsPtr visual_tools, bool verbose = false);
+    DavinciGraspCandidate(moveit_msgs::Grasp grasp, const GraspDataPtr grasp_data, Eigen::Affine3d cuboid_pose);
 
-    /**
-     * @brief generate needle grasp depending on how needle will be grasped by gripper
-     * @param theta_0 first parameter to grasp needle
-     * @param theta_1 second parameter to grasp needle
-     * @param theta_2 third parameter to grasp needle
-     * @param theta_3 fourth parameter to grasp needle
-     * @return
-     */
-    bool generateNeedleGrasp(const double &theta_0,
-                             const double &theta_1,
-                             const double &theta_2,
-                             const double &theta_3);
+    moveit_msgs::Grasp grasp_;
 
-    /**
-     * @brief generate needle grasp provided by needle grasp transformation
-     * @param needle_to_gripper_transform
-     * @return
-     */
-    bool generateNeedleGrasp(const Eigen::Affine3d &needle_to_gripper_transform);
-
-  private:
-    ros::NodeHandle nh_;
+    bool grasp_filtered_by_ik_;
+    bool grasp_filtered_by_ik_closed_;      // ik solution was fine with fingers opened, but failed with fingers closed
+    bool grasp_filtered_by_cutting_plane_;  // grasp pose is in an unreachable part of the environment (ex: inside
+                                            // or behind a wall)
+    bool grasp_filtered_by_orientation_;    // grasp pose is not desireable
 
 
   };
+
+  typedef boost::shared_ptr<GraspCandidate> GraspCandidatePtr;
 }  // namespace
 
-#endif //CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_NEEDLE_GRASPER_H
+
+
+#endif //CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_GRASP_CANDIDATE_H

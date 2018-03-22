@@ -66,8 +66,8 @@
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
 // moveit_grasps
-#include <moveit_grasps/grasp_candidate.h>
-#include <moveit_grasps/grasp_scorer.h>
+#include <cwru_davinci_moveit_grasps/davinci_grasp_candidate.h>
+//#include <cwru_davinci_moveit_grasps/grasp_scorer.h>
 
 // bounding_box
 //#include <bounding_box/bounding_box.h>
@@ -229,7 +229,7 @@ namespace davinci_moveit_grasps
   typedef boost::shared_ptr<GraspGenerator> GraspGeneratorPtr;
   typedef boost::shared_ptr<const GraspGenerator> GraspGeneratorConstPtr;
 
-}
+}  // namespace
 
 
 #endif //CWRU_DAVINCI_MOVEIT_GRASPS_DAVINCI_GRASP_GENERATOR_H

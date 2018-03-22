@@ -24,7 +24,8 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
   moveit_msgs
-)
+  roslint
+  )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
@@ -62,7 +63,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 ## Generate messages in the 'msg' folder
 add_message_files(DIRECTORY msg FILES
   GraspGeneratorOptions.msg
-)
+  )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -74,7 +75,7 @@ add_message_files(DIRECTORY msg FILES
 ## Generate actions in the 'action' folder
 add_action_files(DIRECTORY action FILES
   GenerateGrasps.action
-)
+  )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(DEPENDENCIES
@@ -82,7 +83,7 @@ generate_messages(DEPENDENCIES
   actionlib_msgs
   std_msgs
   moveit_msgs
-)
+  )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -127,19 +128,29 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
- include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
- add_library(${PROJECT_NAME}
-   src/davinci_grasp_generator.cpp
- )
+add_library(${PROJECT_NAME}
+  src/davinci_grasp_generator.cpp
+  src/davinci_grasp_candidate.cpp
+  )
 
 target_link_libraries(${PROJECT_NAME}
-        ${catkin_LIBRARIES} ${Boost_LIBRARIES}
-        )
+  ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
+# Grasp Filter Library
+add_library(${PROJECT_NAME}_filter
+  src/davinci_grasp_filter.cpp
+  )
+
+target_link_libraries(${PROJECT_NAME}_filter
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+  )
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -164,7 +175,8 @@ target_link_libraries(${PROJECT_NAME}
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-
+roslint_cpp()
+roslint_add_test()
 #############
 ## Install ##
 #############
