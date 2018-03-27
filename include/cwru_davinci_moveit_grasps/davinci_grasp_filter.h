@@ -271,7 +271,7 @@ namespace davinci_moveit_grasps
     robot_state::RobotStatePtr robot_state_;
 
     // keep a robot state for every thread
-    std::vector<robot_state::RobotStatePtr> robot_states_;
+    std::vector<robot_state::RobotStatePtr> robot_states_list_;
 
     // thread kinematic solvers
     std::map<std::string, std::vector<kinematics::KinematicsBaseConstPtr> > kin_solvers_;

@@ -247,6 +247,190 @@ namespace davinci_moveit_grasps
       planning_scene_monitor::LockedPlanningSceneRO scene(planning_scene_monitor);
       cloned_scene = planning_scene::PlanningScene::clone(scene);
     }
+
+    *robot_state_ = cloned_scene->getCurrentState();
+
+
+    // -----------------------------------------------------------------------------------------------
+    // Choose Number of cores
+    std::size_t num_threads = omp_get_max_threads();
+    if(num_threads > grasp_candidates.size())
+    {
+      num_threads = grasp_candidates.size();
+    }
+
+    // debug
+    if(verbose || collision_verbose_)
+    {
+      num_threads = 1;
+      ROS_WARN_STREAM_NAMED("grasp_filter", "Using only " << num_threads << " threads because verbose is true");
+    }
+
+    ROS_INFO_STREAM_NAMED("grasp_filter", "Filtering " << grasp_candidates.size() << " candidate grasps with "
+                                                       << num_threads << " threads");
+
+    // -----------------------------------------------------------------------------------------------
+    // load kinematic solvers if not already loaded
+    if(kin_solvers_[arm_jmg->getName()].size() != num_threads)
+    {
+      kin_solvers_[arm_jmg->getName()].clear();
+
+      // create an ik solver for every thread
+      for(std::size_t i = 0; i < num_threads; ++i)
+      {
+        kin_solvers_[arm_jmg->getName()].push_back(arm_jmg->getSolverInstance());
+
+        // test to make sure we have a valid kinematic solver
+        if(!kin_solvers_[arm_jmg->getName()][i])
+        {
+          ROS_ERROR_STREAM_NAMED("grasp_filter", "No kinematic solver found");
+          return 0;
+        }
+      }
+    }
+
+    // robot stats -------------------------------------------------------------------------------
+    // create a robot state for every thread
+    if(robot_states_list_.size() != num_threads)
+    {
+      robot_states_list_.clear();
+      for(std::size_t i = 0; i < num_threads; ++i)
+      {
+        // copy the previous robot state
+        robot_states_list_.push_back(moveit::core::RobotStatePtr(new moveit::core::RobotState(*robot_state_)));
+      }
+    }
+    else
+    {
+      for(std::size_t i = 0; i < num_threads; ++i)
+      {
+        // copu the previous robot state
+        *(robot_states_list_[i]) = *robot_state_;
+      }
+    }
+
+    // transform poses -------------------------------------------------------------------------------
+    // bring the pose to the frame of the IK solver
+    const std::string& ik_frame = kin_solvers_[arm_jmg->getName()][0]->getBaseFrame();
+    Eigen::Affine3d link_transform;
+    ROS_DEBUG_STREAM_NAMED("grasp_filter.superdebug",
+                           "Frame transform from ik_frame: " << ik_frame << " and robot model frame: "
+                                                             << robot_state_->getRobotModel()->getModelFrame());
+
+    if(!moveit::core::Transforms::sameFrame(ik_frame, robot_state_->getRobotModel()->getModelFrame()))
+    {
+      const robot_model::LinkModel *lm = robot_state_->getLinkModel(
+        (!ik_frame.empty() && ik_frame[0] == '/') ? ik_frame.substr(1) : ik_frame);
+
+      if(!lm)
+      {
+        ROS_ERROR_STREAM_NAMED("grasp_filter", "Unable to find frame for link transform");
+        return 0;
+      }
+
+      link_transform = robot_state_->getGlobalLinkTransform(lm).inverse();
+    }
+
+
+    // create the seed state vector
+    std::vector<double> ik_seed_state;
+    seed_state->copyJointGroupPositions(arm_jmg, ik_seed_state);
+
+    // Thread data -------------------------------------------------------------------------------
+    // allocate only once to increase performance
+    std::vector<IkThreadStructPtr> ik_thread_structs;
+    ik_thread_structs.resize(num_threads);
+    for(std::size_t thread_id = 0; thread_id < num_threads; ++thread_id)
+    {
+      ik_thread_structs[thread_id].reset(
+        new davinci_moveit_grasps::IkThreadStruct(grasp_candidates, cloned_scene, link_transform, 0,
+                                                  kin_solvers_[arm_jmg->getName()][thread_id],
+                                                  robot_states_list_[thread_id], solver_timeout_,
+                                                  filter_pregrasp, verbose, thread_id));
+      ik_thread_structs[thread_id]->ik_seed_state_ = ik_seed_state;
+    }
+
+    // Benchmark time
+    ros::Time start_time;
+    start_time = ros::Time::now();
+
+    // -----------------------------------------------------------------------------------------------
+    // Loop through poses and find those that are kinematically feasible
+
+    omp_set_num_threads(num_threads);
+    #pragma omp parallel for schedule(dynamic)
+    for(std::size_t grasp_id = 0; grasp_id < grasp_candidates.size(); ++grasp_id)
+    {
+      std::size_t thread_id = omp_get_thread_num();
+      ROS_DEBUG_STREAM_NAMED("grasp_filter.superdebug", "Thread " << thread_id << " processing grasp " << grasp_id);
+
+      // if in verbose mode allow for quick exit
+      if(ik_thread_structs[thread_id]->verbose_ && !ros::ok())
+      {
+        continue;
+      }
+
+      // assign grasp to process
+      ik_thread_structs[thread_id]->grasp_id = grasp_id;
+
+      // procss the grasp
+      processCandidateGrasp(ik_thread_structs[thread_id]);
+    }
+
+    // count number of grasps remaining
+    std::size_t remaining_grasps = 0;
+    std::size_t grasp_filtered_by_ik = 0;
+    std::size_t grasp_filtered_by_cutting_plane = 0;
+    std::size_t grasp_filtered_by_orientation = 0;
+    std::size_t pregrasp_filtered_by_ik = 0;
+
+    for(std::size_t i = 0; i < grasp_candidates.size(); ++i)
+    {
+      if (grasp_candidates[i]->grasp_filtered_by_ik_)
+        grasp_filtered_by_ik++;
+      else if (grasp_candidates[i]->grasp_filtered_by_cutting_plane_)
+        grasp_filtered_by_cutting_plane++;
+      else if (grasp_candidates[i]->grasp_filtered_by_orientation_)
+        grasp_filtered_by_orientation++;
+      else if (grasp_candidates[i]->pregrasp_filtered_by_ik_)
+        pregrasp_filtered_by_ik++;
+      else
+        remaining_grasps++;
+    }
+
+    if (remaining_grasps + grasp_filtered_by_ik + grasp_filtered_by_cutting_plane + grasp_filtered_by_orientation +
+        pregrasp_filtered_by_ik != grasp_candidates.size())
+    {
+      ROS_ERROR_STREAM_NAMED("grasp_filter", "Logged filter reasons do not add up to total number of grasps. Internal "
+        "error.");
+    }
+
+    // end benchmark time
+    double duration = (ros::Time::now() - start_time).toSec();
+
+    // keep a running average of calucation time
+    static double total_duration = 0;
+    static std::size_t total_filter_calls = 0;
+    total_duration += duration;
+    total_filter_calls += 1;
+    double average_duration = total_duration / total_filter_calls;
+
+    if(statistics_verbose_)
+    {
+      std::cout << "-------------------------------------------------------" << std::endl;
+      std::cout << "GRASP FILTER RESULTS " << std::endl;
+      std::cout << "total candidate grasps          " << grasp_candidates.size() << std::endl;
+      std::cout << "grasp_filtered_by_cutting_plane " << grasp_filtered_by_cutting_plane << std::endl;
+      std::cout << "grasp_filtered_by_orientation   " << grasp_filtered_by_orientation << std::endl;
+      std::cout << "grasp_filtered_by_ik            " << grasp_filtered_by_ik << std::endl;
+      std::cout << "pregrasp_filtered_by_ik         " << pregrasp_filtered_by_ik << std::endl;
+      std::cout << "remaining grasps                " << remaining_grasps << std::endl;
+      std::cout << "time duration:                  " << duration << std::endl;
+      std::cout << "average time duration:          " << average_duration << std::endl;
+      std::cout << "-------------------------------------------------------" << std::endl;
+    }
+
+    return remaining_grasps;
   }
 
   bool DavinciGraspFilter::visualizeGrasps(const std::vector<GraspCandidatePtr> &grasp_candidates,
